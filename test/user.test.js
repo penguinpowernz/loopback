@@ -1801,6 +1801,48 @@ describe('User', function() {
             done();
           });
       });
+
+      it('invalidates the user\'s sessions once the email is changed', function(done) {
+        var usersId;
+        async.series([
+          function(next) {
+            User.create({ email: 'b@c.com', password: 'bar' }, function(err, user) {
+              usersId = user.id;
+              next(err);
+            });
+          },
+          function(next) {
+            User.login({ email: 'b@c.com', password: 'bar' }, function(err, accessToken) {
+              if (err) return next(err);
+              assert(accessToken.userId);
+              next();
+            });
+          },
+          function(next) {
+            User.login({ email: 'b@c.com', password: 'bar' }, function(err, accessToken) {
+              if (err) return next(err);
+              assert(accessToken.userId);
+              next();
+            });
+          },
+          function(next) {
+            User.findById(usersId, function(err, userFound)  {
+              if (err) return next(err);
+              userFound.updateAttribute('email', 'c@d.com', function(err, userInstance){
+                if (err) return next(err);
+                AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
+                  if (err) return next(err);
+                  expect(tokens.length).to.equal(0);
+                  next();
+                });
+              });
+            });
+          },
+        ], function(err) {
+          if (err) return done(err);
+          done();
+        });
+      });
     });
   });
 

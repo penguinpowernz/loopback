@@ -1828,14 +1828,17 @@ describe('User', function() {
           function(next) {
             User.findById(usersId, function(err, userFound)  {
               if (err) return next(err);
-              userFound.updateAttribute('email', 'c@d.com', function(err, userInstance){
+              userFound.updateAttribute('email', 'c@d.com', function(err, userInstance) {
                 if (err) return next(err);
-                AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-                  if (err) return next(err);
-                  expect(tokens.length).to.equal(0);
-                  next();
-                });
+                next();
               });
+            });
+          },
+          function(next) {
+            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
+              if (err) return next(err);
+              expect(tokens.length).to.equal(0);
+              next();
             });
           },
         ], function(err) {

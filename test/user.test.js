@@ -1802,33 +1802,33 @@ describe('User', function() {
           });
       });
 
-      it('invalidates the user\'s sessions once the email is changed', function(done) {
+      it('invalidates the sessions once the email is changed', function(done) {
         var usersId;
         async.series([
           function(next) {
-            User.create({ email: 'b@c.com', password: 'bar' }, function(err, user) {
+            User.create({ email: 'm@c.com', password: 'bar' }, function(err, user) {
               usersId = user.id;
               next(err);
             });
           },
           function(next) {
-            User.login({ email: 'b@c.com', password: 'bar' }, function(err, accessToken) {
+            User.login({ email: 'm@c.com', password: 'bar' }, function(err, accessToken1) {
               if (err) return next(err);
-              assert(accessToken.userId);
+              assert(accessToken1.userId);
               next();
             });
           },
           function(next) {
-            User.login({ email: 'b@c.com', password: 'bar' }, function(err, accessToken) {
+            User.login({ email: 'm@c.com', password: 'bar' }, function(err, accessToken2) {
               if (err) return next(err);
-              assert(accessToken.userId);
+              assert(accessToken2.userId);
               next();
             });
           },
           function(next) {
             User.findById(usersId, function(err, userFound)  {
               if (err) return next(err);
-              userFound.updateAttribute('email', 'c@d.com', function(err, userInstance) {
+              userFound.updateAttribute('email', 'n@d.com', function(err, userInstance) {
                 if (err) return next(err);
                 next();
               });

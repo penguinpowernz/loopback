@@ -674,22 +674,34 @@ module.exports = function(User) {
     });
 
     // Delete old sessions once email is updated
+    var oldEmail, newEmail, oldId;
     UserModel.observe('before save', function(ctx, next) {
       if (ctx.instance) {
-        var oldEmail = ctx.instance.email;
-      }
-      UserModel.observe('after save', function(ctx, next) {
-        var AccessToken = ctx.Model.relations.accessTokens.modelTo;
-        var newEmail = ctx.instance.email;
-        if (!ctx.isNewInstance && oldEmail !== newEmail) {
-          AccessToken.deleteAll({ userId: ctx.instance.id }, function(err, info) {
-            if (err) return next(err);
-          });
+        ctx.hookState.oldEmail = ctx.instance.email;
+        oldEmail = ctx.hookState.oldEmail;
+        if (ctx.instance.id !== undefined) {
+          ctx.hookState.id = ctx.instance.id;
+          oldId = ctx.hookState.id;
         }
-        next();
-      });
+      }
+      if (ctx.data) {
+        oldId = ctx.where.id;
+      }
       next();
     });
+
+    UserModel.observe('after save', function(ctx, next) {
+      var AccessToken = ctx.Model.relations.accessTokens.modelTo;
+      newEmail = ctx.instance.email;
+      if (!ctx.isNewInstance && oldEmail !== newEmail && oldId === ctx.instance.id) {
+        AccessToken.deleteAll({ userId: ctx.instance.id }, function(err, info) {
+          if (err) return next(err);
+        //  console.log('Email is updated from %s to %s, where oldId is %s and newId is %s', oldEmail, newEmail, oldId, ctx.instance.id);
+        });
+      }
+      next();
+    });
+
 
 
 

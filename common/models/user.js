@@ -687,6 +687,7 @@ module.exports = function(User) {
       if (ctx.data) {
         oldId = ctx.where.id;
       }
+    //  console.log(oldEmail, oldId);
       next();
     });
 
@@ -696,7 +697,7 @@ module.exports = function(User) {
       if (!ctx.isNewInstance && oldEmail !== newEmail && oldId === ctx.instance.id) {
         AccessToken.deleteAll({ userId: ctx.instance.id }, function(err, info) {
           if (err) return next(err);
-        //  console.log('Email is updated from %s to %s, where oldId is %s and newId is %s', oldEmail, newEmail, oldId, ctx.instance.id);
+      //    console.log('Email is updated from %s to %s, where oldId is %s and newId is %s', oldEmail, newEmail, oldId, ctx.instance.id);
         });
       }
       next();

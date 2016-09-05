@@ -2134,11 +2134,11 @@ describe('User', function() {
             });
           },
           function(next) {
-            User.findById(user1Id, function(err, userFound)  {
+            User.findById(user2Id, function(err, userFound)  {
               if (err) return next(err);
-              userFound.updateAttribute('email', 'user1Update@a.com', function(err, userInstance) {
+              userFound.updateAttribute('email', 'user2Update@b.com', function(err, userInstance) {
                 if (err) return next(err);
-                assert.equal(userInstance.email, 'user1Update@a.com');
+                assert.equal(userInstance.email, 'user2Update@b.com');
                 next();
               });
             });
@@ -2149,8 +2149,8 @@ describe('User', function() {
                 AccessToken.find({ where: { userId: user3Id }}, function(err, tokens3) {
                   if (err) return next(err);
 
-                  expect(tokens1.length).to.equal(0);
-                  expect(tokens2.length).to.equal(1);
+                  expect(tokens1.length).to.equal(1);
+                  expect(tokens2.length).to.equal(0);
                   expect(tokens3.length).to.equal(1);
                   next();
                 });

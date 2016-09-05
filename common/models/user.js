@@ -674,30 +674,36 @@ module.exports = function(User) {
     });
 
     // Delete old sessions once email is updated
-    var oldEmail, newEmail, oldId;
+    var oldEmail, newEmail, oldId, newId;
     UserModel.observe('before save', function(ctx, next) {
       if (ctx.instance) {
-        ctx.hookState.oldEmail = ctx.instance.email;
-        oldEmail = ctx.hookState.oldEmail;
         if (ctx.instance.id !== undefined) {
           ctx.hookState.id = ctx.instance.id;
           oldId = ctx.hookState.id;
         }
       }
       if (ctx.data) {
-        oldId = ctx.where.id;
+        ctx.hookState.id = ctx.where.id;
+        oldId = ctx.hookState.id;
       }
-    //  console.log(oldEmail, oldId);
+      ctx.Model.find({ where: { id: oldId }}, function(err, userInstances) {
+        userInstances.forEach(function(userInstance) {
+          ctx.hookState.email = userInstance.email;
+          oldEmail = ctx.hookState.email;
+        });
+      });
       next();
     });
 
     UserModel.observe('after save', function(ctx, next) {
       var AccessToken = ctx.Model.relations.accessTokens.modelTo;
       newEmail = ctx.instance.email;
-      if (!ctx.isNewInstance && oldEmail !== newEmail && oldId === ctx.instance.id) {
+      newId = ctx.instance.id;
+      if (!ctx.isNewInstance && oldEmail !== newEmail && oldId === newId) {
         AccessToken.deleteAll({ userId: ctx.instance.id }, function(err, info) {
           if (err) return next(err);
-      //    console.log('Email is updated from %s to %s, where oldId is %s and newId is %s', oldEmail, newEmail, oldId, ctx.instance.id);
+          debug('Email is updated from %s to %s, where oldId is %s and newId is %s', oldEmail,
+           newEmail, oldId, newId);
         });
       }
       next();

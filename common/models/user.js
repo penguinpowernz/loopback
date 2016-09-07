@@ -709,9 +709,6 @@ module.exports = function(User) {
       next();
     });
 
-
-
-
     UserModel.remoteMethod(
       'login',
       {

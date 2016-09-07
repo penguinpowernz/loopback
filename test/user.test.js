@@ -1806,314 +1806,245 @@ describe('User', function() {
 
   describe('Email Update', function() {
     describe('User changing email property', function() {
-      var usersId;
-      var currentEmailCredentials = { email: 'm@c.com', password: 'bar' };
-      var updatedEmailCredentials = { email: 'n@d.com', password: 'bar' };
+      var user;
+      var currentEmailCredentials = { email: 'original@example.com', password: 'bar' };
+      var updatedEmailCredentials = { email: 'updated@example.com', password: 'bar' };
 
-      beforeEach(function(done) {
+      function assertNoAccessTokens(done) {
+        AccessToken.find({ where: { userId: user.id }}, function(err, tokens) {
+          if (err) return done(err);
+          expect(tokens.length).to.equal(0);
+          done();
+        });
+      }
+
+      function assertUntouchedTokens(done) {
+        AccessToken.find({ where: { userId: user.id }}, function(err, tokens) {
+          if (err) return done(err);
+          expect(tokens.length).to.equal(2);
+          done();
+        });
+      }
+
+      beforeEach('create user then login', function createAndLogin(done) {
         async.series([
-          function(next) {
-            User.create({ email: currentEmailCredentials.email,
-            password: currentEmailCredentials.password }, function(err, user) {
-              usersId = user.id;
-              next();
-            });
+          function createUserWithOriginalEmail(next) {
+            User.create(
+              { email: currentEmailCredentials.email,
+                password: currentEmailCredentials.password },
+                function(err, userCreated) {
+                  if (err) return next(err);
+                  user = userCreated;
+                  next();
+                });
           },
-          function(next) {
-            User.login({ email: currentEmailCredentials.email,
-            password: currentEmailCredentials.password }, function(err, accessToken1) {
-              if (err) return next(err);
-              assert(accessToken1.userId);
-              next();
-            });
+          function firstLoginWithOriginalEmail(next) {
+            User.login(
+              { email: currentEmailCredentials.email,
+                password: currentEmailCredentials.password },
+                function(err, accessToken1) {
+                  if (err) return next(err);
+                  assert(accessToken1.userId);
+                  next();
+                });
           },
-          function(next) {
-            User.login({ email: currentEmailCredentials.email,
-            password: currentEmailCredentials.password }, function(err, accessToken2) {
-              if (err) return next(err);
-              assert(accessToken2.userId);
-              next();
-            });
+          function secondLoginWithOriginalEmail(next) {
+            User.login({
+              email: currentEmailCredentials.email,
+              password: currentEmailCredentials.password },
+              function(err, accessToken2) {
+                if (err) return next(err);
+                assert(accessToken2.userId);
+                next();
+              });
           },
         ], function(err) {
-          if (err) return done(err);
           done();
         });
       });
 
-      afterEach(function(done) {
-        User.deleteById(usersId, function(err, user) {
+      afterEach('Deleting original user', function deleteOriginalAccounts(done) {
+        User.deleteById(user.id, function(err, user) {
           if (err) return done (err);
           done();
         });
       });
 
-      it('invalidates sessions once the email is changed using `updateAttribute`', function(done) {
-        async.series([
-          function(next) {
-            User.findById(usersId, function(err, userFound)  {
-              if (err) return next(err);
-              userFound.updateAttribute('email', updatedEmailCredentials.email,
-            function(err, userInstance) {
-              if (err) return next(err);
-              assert.equal(userInstance.email, updatedEmailCredentials.email);
-              next();
-            });
-            });
-          },
-          function(next) {
-            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-              if (err) return next(err);
-              expect(tokens.length).to.equal(0);
-              next();
-            });
-          },
-        ], function(err) {
+      it('invalidates sessions when email is changed using `updateAttribute`', function(done) {
+        user.updateAttribute('email', updatedEmailCredentials.email, function(err, userInstance) {
           if (err) return done(err);
-          done();
+          assertNoAccessTokens(done);
         });
       });
 
-      it('invalidates sessions once the email is changed using `updateAttributes`', function(done) {
-        async.series([
-          function(next) {
-            User.findById(usersId, function(err, userFound)  {
-              if (err) return next(err);
-              userFound.updateAttributes({ 'email': updatedEmailCredentials.email },
-            function(err, userInstance) {
-              if (err) return next(err);
-              assert.equal(userInstance.email, updatedEmailCredentials.email);
-              next();
-            });
-            });
-          },
-          function(next) {
-            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-              if (err) return next(err);
-              expect(tokens.length).to.equal(0);
-              next();
-            });
-          },
-        ], function(err) {
+      it('invalidates sessions when email is changed using `updateAttributes`', function(done) {
+        user.updateAttributes({ 'email': updatedEmailCredentials.email },
+        function(err, userInstance) {
           if (err) return done(err);
-          done();
+          assertNoAccessTokens(done);
         });
       });
 
-      it('invalidates sessions once the email is changed using `replaceAttributes`',
-       function(done) {
-         async.series([
-           function(next) {
-             User.findById(usersId, function(err, userFound)  {
-               if (err) return next(err);
-               userFound.replaceAttributes({ 'email': updatedEmailCredentials.email,
+      it('invalidates sessions when email is changed using `replaceAttributes`', function(done) {
+        user.replaceAttributes(
+          { 'email': updatedEmailCredentials.email,
             'password': updatedEmailCredentials.password },
               function(err, userInstance) {
-                if (err) return next(err);
-                assert.equal(userInstance.email, updatedEmailCredentials.email);
-                next();
+                if (err) return done(err);
+                assertNoAccessTokens(done);
               });
-             });
-           },
-           function(next) {
-             AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-               if (err) return next(err);
-               expect(tokens.length).to.equal(0);
-               next();
-             });
-           },
-         ], function(err) {
-           if (err) return done(err);
-           done();
-         });
-       });
-
-      it('invalidates sessions once the email is changed using `updateOrCreate`', function(done) {
-        async.series([
-          function(next) {
-            User.updateOrCreate({ id: usersId, email: updatedEmailCredentials.email,
-            password: updatedEmailCredentials.password },
-            function(err, userInstance) {
-              if (err) return next(err);
-              assert.equal(userInstance.email, updatedEmailCredentials.email);
-              next();
-            });
-          },
-          function(next) {
-            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-              if (err) return next(err);
-              expect(tokens.length).to.equal(0);
-              next();
-            });
-          },
-        ], function(err) {
-          if (err) return done(err);
-          done();
-        });
       });
 
-      it('invalidates sessions once the email is changed using `replaceById`', function(done) {
-        async.series([
-          function(next) {
-            User.replaceById(usersId, { email: updatedEmailCredentials.email,
+      it('invalidates sessions when email is changed using `updateOrCreate`', function(done) {
+        User.updateOrCreate(
+          { id: user.id,
+            email: updatedEmailCredentials.email,
             password: updatedEmailCredentials.password },
             function(err, userInstance) {
-              if (err) return next(err);
-              assert.equal(userInstance.email, updatedEmailCredentials.email);
-              next();
+              if (err) return done(err);
+              assertNoAccessTokens(done);
             });
-          },
-          function(next) {
-            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-              if (err) return next(err);
-              expect(tokens.length).to.equal(0);
-              next();
+      });
+
+      it('invalidates sessions when the email is changed using `replaceById`', function(done) {
+        User.replaceById(user.id,
+          { email: updatedEmailCredentials.email,
+            password: updatedEmailCredentials.password },
+            function(err, userInstance) {
+              if (err) return done(err);
+              assertNoAccessTokens(done);
             });
-          },
-        ], function(err) {
-          if (err) return done(err);
-          done();
-        });
       });
 
       it('keeps sessions AS IS if firstName is added using `updateAttribute`', function(done) {
-        async.series([
-          function(next) {
-            User.findById(usersId, function(err, userFound)  {
-              if (err) return next(err);
-              userFound.updateAttribute('firstName', 'Loay', function(err, userInstance) {
-                if (err) return next(err);
-                assert.equal(userInstance.firstName, 'Loay');
-                next();
-              });
-            });
-          },
-          function(next) {
-            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-              if (err) return next(err);
-              expect(tokens.length).to.equal(2);
-              next();
-            });
-          },
-        ], function(err) {
+        user.updateAttribute('firstName', 'Loay', function(err, userInstance) {
           if (err) return done(err);
+          assertNoAccessTokens(done);
           done();
         });
       });
 
       it('keeps sessions AS IS if firstName is added using `updateAttributes`', function(done) {
-        async.series([
-          function(next) {
-            User.findById(usersId, function(err, userFound)  {
-              if (err) return next(err);
-              userFound.updateAttributes({ 'firstName': 'Janny' }, function(err, userInstance) {
-                if (err) return next(err);
-                assert.equal(userInstance.firstName, 'Janny');
-                next();
-              });
-            });
-          },
-          function(next) {
-            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-              if (err) return next(err);
-              expect(tokens.length).to.equal(2);
-              next();
-            });
-          },
-        ], function(err) {
+        user.updateAttributes({ 'firstName': 'Janny' }, function(err, userInstance) {
           if (err) return done(err);
-          done();
+          assertUntouchedTokens(done);
         });
       });
 
       it('keeps sessions AS IS if firstName is added using `replaceAttributes`', function(done) {
-        async.series([
-          function(next) {
-            User.findById(usersId, function(err, userFound)  {
-              if (err) return next(err);
-              userFound.replaceAttributes({ 'email': currentEmailCredentials.email,
+        user.replaceAttributes(
+          { 'email': currentEmailCredentials.email,
             'password': currentEmailCredentials.password,
-             'firstName': 'Candy' }, function(err, userInstance) {
-                if (err) return next(err);
-                assert.equal(userInstance.firstName, 'Candy');
-                next();
-              });
+            'firstName': 'Candy' },
+            function(err, userInstance) {
+              if (err) return done(err);
+              assertUntouchedTokens(done);
             });
-          },
-          function(next) {
-            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-              if (err) return next(err);
-              expect(tokens.length).to.equal(2);
-              next();
-            });
-          },
-        ], function(err) {
-          if (err) return done(err);
-          done();
-        });
       });
 
       it('keeps sessions AS IS if firstName is added using `updateOrCreate`', function(done) {
+        User.updateOrCreate(
+          { id: user.id,
+            'firstName': 'Amir',
+           'email': currentEmailCredentials.email,
+           'password': currentEmailCredentials.password },
+           function(err, userInstance) {
+             if (err) return done(err);
+             assertUntouchedTokens(done);
+           });
+      });
+
+      it('keeps sessions AS IS if firstName is added using `replaceById`', function(done) {
+        User.replaceById(user.id,
+          { 'firstName': 'Miroslav',
+            'email': currentEmailCredentials.email,
+            'password': currentEmailCredentials.password },
+            function(err, userInstance) {
+              if (err) return done(err);
+              assertUntouchedTokens(done);
+            });
+      });
+    });
+
+    describe('sessions valid after creating new users', function() {
+      var newUserCreated;
+      function assertPreservedToken(done) {
+        AccessToken.find({ where: { userId: newUserCreated.id }}, function(err, tokens) {
+          if (err) return done(err);
+          expect(tokens.length).to.equal(1);
+          done();
+        });
+      };
+
+      it('keeps sessions AS IS if a new user is created using `create`', function(done) {
         async.series([
           function(next) {
-            User.updateOrCreate({ id: usersId, 'firstName': 'Amir',
-          'email': currentEmailCredentials.email, 'password': 'bar' },
-          function(err, userInstance) {
-            if (err) return next(err);
-            assert.equal(userInstance.firstName, 'Amir');
-            next();
-          });
+            User.create(
+              { 'email': 'newuser@example.com',
+                'password': 'newpass' },
+                function(err, newUserInstance) {
+                  if (err) return done(err);
+                  newUserCreated = newUserInstance;
+                  next();
+                });
           },
           function(next) {
-            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-              if (err) return next(err);
-              expect(tokens.length).to.equal(2);
-              next();
-            });
+            User.login(
+              { 'email': 'newuser@example.com',
+                'password': 'newpass' },
+                function(err, newAccessToken) {
+                  if (err) return done(err);
+                  assert(newAccessToken.id);
+                  assertPreservedToken(next);
+                });
           },
         ], function(err) {
-          if (err) return done(err);
           done();
         });
       });
 
-      it('keeps sessions AS IS if firstName is added using `replaceById`', function(done) {
+      it('keeps sessions AS IS if a new user is created using `updateOrCreate`', function(done) {
         async.series([
           function(next) {
-            User.replaceById(usersId, { 'firstName': 'Miroslav',
-          'email': currentEmailCredentials.email, 'password': currentEmailCredentials.password },
-            function(err, userInstance) {
-              if (err) return next(err);
-              assert.equal(userInstance.email, currentEmailCredentials.email);
-              next();
-            });
+            User.create(
+              { 'email': 'newuser@example.com',
+                'password': 'newpass' },
+                function(err, newUserInstance2) {
+                  if (err) return done(err);
+                  newUserCreated = newUserInstance2;
+                  next();
+                });
           },
           function(next) {
-            AccessToken.find({ where: { userId: usersId }}, function(err, tokens) {
-              if (err) return next(err);
-              expect(tokens.length).to.equal(2);
-              next();
-            });
+            User.login(
+              { 'email': 'newuser@example.com',
+                'password': 'newpass' },
+                function(err, newAccessToken2) {
+                  if (err) return done(err);
+                  assert(newAccessToken2.id);
+                  assertPreservedToken(next);
+                });
           },
         ], function(err) {
-          if (err) return done(err);
           done();
         });
       });
     });
 
     describe('User not chaning email property', function() {
-      var user1Id, user2Id, user3Id;
-      it('keeps sessions untouched if email property is not changed', function(done) {
+      var user1, user2, user3;
+      it('preserves other users\' sessions if their email is  untouched', function(done) {
         async.series([
           function(next) {
-            User.create({ email: 'user1@a.com', password: 'u1pass' }, function(err, user1) {
-              User.create({ email: 'user2@b.com', password: 'u2pass' }, function(err, user2) {
-                User.create({ email: 'user3@c.com', password: 'u3pass' }, function(err, user3) {
+            User.create({ email: 'user1@example.com', password: 'u1pass' }, function(err, u1) {
+              if (err) return done(err);
+              User.create({ email: 'user2@example.com', password: 'u2pass' }, function(err, u2) {
+                if (err) return done(err);
+                User.create({ email: 'user3@example.com', password: 'u3pass' }, function(err, u3) {
                   if (err) return done(err);
-                  user1Id = user1.id;
-                  user2Id = user2.id;
-                  user3Id = user3.id;
+                  user1 = u1;
+                  user2 = u2;
+                  user3 = u3;
                   next();
                 });
               });
@@ -2134,19 +2065,18 @@ describe('User', function() {
             });
           },
           function(next) {
-            User.findById(user2Id, function(err, userFound)  {
+            user2.updateAttribute('email', 'user2Update@b.com', function(err, userInstance) {
               if (err) return next(err);
-              userFound.updateAttribute('email', 'user2Update@b.com', function(err, userInstance) {
-                if (err) return next(err);
-                assert.equal(userInstance.email, 'user2Update@b.com');
-                next();
-              });
+              assert.equal(userInstance.email, 'user2Update@b.com');
+              next();
             });
           },
           function(next) {
-            AccessToken.find({ where: { userId: user1Id }}, function(err, tokens1) {
-              AccessToken.find({ where: { userId: user2Id }}, function(err, tokens2) {
-                AccessToken.find({ where: { userId: user3Id }}, function(err, tokens3) {
+            AccessToken.find({ where: { userId: user1.id }}, function(err, tokens1) {
+              if (err) return next(err);
+              AccessToken.find({ where: { userId: user2.id }}, function(err, tokens2) {
+                if (err) return next(err);
+                AccessToken.find({ where: { userId: user3.id }}, function(err, tokens3) {
                   if (err) return next(err);
 
                   expect(tokens1.length).to.equal(1);
@@ -2158,7 +2088,6 @@ describe('User', function() {
             });
           },
         ], function(err) {
-          if (err) return done(err);
           done();
         });
       });

@@ -2051,14 +2051,11 @@ describe('User', function() {
             });
           },
           function(next) {
-            User.login({ email: 'user1@a.com', password: 'u1pass' }, function(err, accessToken1) {
-              User.login({ email: 'user2@b.com', password: 'u2pass' }, function(err, accessToken2) {
-                User.login({ email: 'user3@c.com', password: 'u3pass' },
+            User.login({ email: 'user1@example.com', password: 'u1pass' }, function(err, accessToken1) {
+              User.login({ email: 'user2@example.com', password: 'u2pass' }, function(err, accessToken2) {
+                User.login({ email: 'user3@example.com', password: 'u3pass' },
                 function(err, accessToken3) {
                   if (err) return next(err);
-                  assert(accessToken1.userId);
-                  assert(accessToken2.userId);
-                  assert(accessToken3.userId);
                   next();
                 });
               });

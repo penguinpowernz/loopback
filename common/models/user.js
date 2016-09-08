@@ -674,39 +674,39 @@ module.exports = function(User) {
     });
 
     // Delete old sessions once email is updated
-    var oldEmail, newEmail, oldId, newId;
-    UserModel.observe('before save', function(ctx, next) {
-      if (ctx.instance) {
-        if (ctx.instance.id !== undefined) {
-          ctx.hookState.id = ctx.instance.id;
-          oldId = ctx.hookState.id;
-        }
-      }
-      if (ctx.data) {
+    UserModel.observe('before save', function beforeEmailUpdate(ctx, next) {
+      var oldEmail, newEmail, oldId, newId;
+      if (ctx.isNewInstance) return next();
+
+      if (ctx.where) {
         ctx.hookState.id = ctx.where.id;
         oldId = ctx.hookState.id;
       }
+
       ctx.Model.find({ where: { id: oldId }}, function(err, userInstances) {
-        userInstances.forEach(function(userInstance) {
-          ctx.hookState.email = userInstance.email;
-          oldEmail = ctx.hookState.email;
+        ctx.hookState.originalUserData = userInstances.map(function(u) {
+          return { id: u.id, email: u.email };
         });
       });
       next();
-    });
 
-    UserModel.observe('after save', function(ctx, next) {
-      var AccessToken = ctx.Model.relations.accessTokens.modelTo;
-      newEmail = ctx.instance.email;
-      newId = ctx.instance.id;
-      if (!ctx.isNewInstance && oldEmail !== newEmail && oldId === newId) {
-        AccessToken.deleteAll({ userId: ctx.instance.id }, function(err, info) {
+      UserModel.observe('after save', function afterEmailUpdate(ctx, next) {
+        var AccessToken = ctx.Model.relations.accessTokens.modelTo;
+        var newEmail = (ctx.instance || ctx.data).email;
+        var idsToExpire = ctx.hookState.originalUserData.filter(function(u) {
+          return u.email !== newEmail;
+        }).map(function(u) {
+          return u.id;
+        });
+
+        if (!idsToExpire.length) return next();
+        AccessToken.deleteAll({ userId: { inq: idsToExpire }}, function(err, info) {
           if (err) return next(err);
           debug('Email is updated from %s to %s, where oldId is %s and newId is %s', oldEmail,
-           newEmail, oldId, newId);
+        newEmail, oldId, newId);
         });
-      }
-      next();
+        next();
+      });
     });
 
     UserModel.remoteMethod(

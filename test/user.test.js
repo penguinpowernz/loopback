@@ -2051,15 +2051,21 @@ describe('User', function() {
             });
           },
           function(next) {
-            User.login({ email: 'user1@example.com', password: 'u1pass' }, function(err, accessToken1) {
-              User.login({ email: 'user2@example.com', password: 'u2pass' }, function(err, accessToken2) {
-                User.login({ email: 'user3@example.com', password: 'u3pass' },
-                function(err, accessToken3) {
-                  if (err) return next(err);
-                  next();
+            User.login(
+              { email: 'user1@example.com',
+                password: 'u1pass' },
+                function(err, accessToken1) {
+                  User.login(
+                    { email: 'user2@example.com',
+                      password: 'u2pass' },
+                      function(err, accessToken2) {
+                        User.login({ email: 'user3@example.com', password: 'u3pass' },
+                        function(err, accessToken3) {
+                          if (err) return next(err);
+                          next();
+                        });
+                      });
                 });
-              });
-            });
           },
           function(next) {
             user2.updateAttribute('email', 'user2Update@b.com', function(err, userInstance) {

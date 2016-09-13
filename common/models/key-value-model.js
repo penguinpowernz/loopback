@@ -1,36 +1,93 @@
 var g = require('strong-globalize')();
 
+/**
+ * Data model for key-value databases.
+ *
+ * @class KeyValueModel
+ * @inherits {Model}
+ */
+
 module.exports = function(KeyValueModel) {
-  // TODO add api docs
+  /**
+   * Return the value for a given key.
+   *
+   * @param {String} key The key to use when searching.
+   * @options {Object} options
+   * @property
+   * @callback {Function} callback The function to execute upon completion.
+   * @param {Error} err The error object
+   * @promise
+   */
   KeyValueModel.get = function(key, options, callback) {
     throwNotAttached(this.modelName, 'get');
   };
 
-  // TODO add api docs
+  /**
+   * Persist a value using a given key.
+   *
+   * @param {String} key The key to use when searching.
+   * @param {Any} value The value to persist.
+   * @options {Object} options
+   * @property
+   * @callback {Function} callback The function to execute upon completion.
+   * @promise
+   */
   KeyValueModel.set = function(key, value, options, callback) {
     throwNotAttached(this.modelName, 'set');
   };
 
-  // TODO add api docs
+  /**
+   * Persist the TTL (time to live) for a given key. TTL is the remaining
+   * time before a key/value pair is discarded from the database.
+   *
+   * @param {String} key The key to use when searching.
+   * @param {Number} ttl The TTL (in milliseconds) to set for the key.
+   * @options {Object} options
+   * @property
+   * @callback {Function} callback The function to execute upon completion.
+   * @promise
+   */
   KeyValueModel.expire = function(key, ttl, options, callback) {
     throwNotAttached(this.modelName, 'expire');
   };
 
-  // TODO add api docs
+  /**
+   * Return the TTL (time to live) for a given key. TTL is the remaining time
+   * before a key/value pair is discarded from the database.
+   *
+   * @param {String} key The key to use when searching.
+   * @options {Object} options
+   * @property
+   * @callback {Function} callback The function to execute upon completion.
+   * @promise
+   */
   KeyValueModel.ttl = function(key, options, callback) {
     throwNotAttached(this.modelName, 'ttl');
   };
 
-  // TODO add api docs
+  /**
+   * Return all keys for a given filter.
+   *
+   * @param {Array of Strings} filter The key to use when searching.
+   * @options {Object} options
+   * @property
+   * @callback {Function} callback The function to execute upon completion.
+   * @promise
+   */
   KeyValueModel.keys = function(filter, options, callback) {
     throwNotAttached(this.modelName, 'keys');
   };
 
-  // TODO add api docs
+  /*!
+   * Iterate through all keys for a given filter.
+   */
   KeyValueModel.iterateKeys = function(filter, options) {
     throwNotAttached(this.modelName, 'iterateKeys');
   };
 
+  /*!
+   * Set up the extended model.
+   */
   KeyValueModel.setup = function() {
     KeyValueModel.base.setup.apply(this, arguments);
 

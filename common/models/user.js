@@ -675,38 +675,43 @@ module.exports = function(User) {
 
     // Delete old sessions once email is updated
     UserModel.observe('before save', function beforeEmailUpdate(ctx, next) {
-      var oldEmail, newEmail, oldId, newId;
       if (ctx.isNewInstance) return next();
-
       if (ctx.where) {
-        ctx.hookState.id = ctx.where.id;
-        oldId = ctx.hookState.id;
+        ctx.Model.find({ where: ctx.where }, function(err, userInstances) {
+          if (err) return next(err);
+          getOriginalUserData(userInstances);
+        });
+      } else if (ctx.instance) {
+        ctx.hookState.id = ctx.instance.id;
+        var oldId = ctx.hookState.id;
+        ctx.Model.find({ where: { id: oldId }}, function(err, userInstances) {
+          if (err) return next (err);
+          getOriginalUserData(userInstances);
+        });
       }
 
-      ctx.Model.find({ where: { id: oldId }}, function(err, userInstances) {
+      function getOriginalUserData(userInstances) {
         ctx.hookState.originalUserData = userInstances.map(function(u) {
           return { id: u.id, email: u.email };
         });
-      });
-      next();
+      }
 
       UserModel.observe('after save', function afterEmailUpdate(ctx, next) {
         var AccessToken = ctx.Model.relations.accessTokens.modelTo;
-        var newEmail = (ctx.instance || ctx.data).email;
+        var  newEmail = (ctx.instance || ctx.data).email;
         var idsToExpire = ctx.hookState.originalUserData.filter(function(u) {
           return u.email !== newEmail;
         }).map(function(u) {
           return u.id;
         });
-
         if (!idsToExpire.length) return next();
         AccessToken.deleteAll({ userId: { inq: idsToExpire }}, function(err, info) {
           if (err) return next(err);
-          debug('Email is updated from %s to %s, where oldId is %s and newId is %s', oldEmail,
-        newEmail, oldId, newId);
         });
         next();
       });
+
+      next();
     });
 
     UserModel.remoteMethod(

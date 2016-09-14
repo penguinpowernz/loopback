@@ -1905,14 +1905,6 @@ describe('User', function() {
             });
       });
 
-      it('keeps sessions AS IS if firstName is added using `updateAttribute`', function(done) {
-        user.updateAttribute('firstName', 'Loay', function(err, userInstance) {
-          if (err) return done(err);
-          assertNoAccessTokens(done);
-          done();
-        });
-      });
-
       it('keeps sessions AS IS if firstName is added using `updateAttributes`', function(done) {
         user.updateAttributes({ 'firstName': 'Janny' }, function(err, userInstance) {
           if (err) return done(err);
